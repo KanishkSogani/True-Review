@@ -11,7 +11,7 @@ import { signUpSchema } from "@/schemas/signUpSchema";
 import axios, { AxiosError } from "axios";
 import { ApiResponse } from "@/types/ApiResponse";
 
-function SignIn() {
+function SignUp() {
   const [username, setUsername] = useState("");
   const [usernameMessage, setUsernameMessage] = useState("");
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
@@ -43,7 +43,7 @@ function SignIn() {
         } catch (error) {
           const axiosError = error as AxiosError<ApiResponse>;
           setUsernameMessage(
-            axiosError.response?.data.message ?? "Error checking username"
+            axiosError.response?.data.message || "Error checking username"
           );
         } finally {
           setIsCheckingUsername(false);
@@ -53,7 +53,33 @@ function SignIn() {
     checkUsernameUnique();
   }, [debouncedUsername]);
 
+  const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
+    setIsSubmitting(true);
+    try {
+      const response = await axios.post<ApiResponse>(`/api/sign-up`, data);
+
+      if (response.data.success) {
+        toast({
+          title: "Success",
+          description: response.data.message,
+        });
+        router.replace(`/verify/${username}`);
+      }
+    } catch (error) {
+      console.error("Error in signup of user", error);
+      const axiosError = error as AxiosError<ApiResponse>;
+      const errorMessage = axiosError.response?.data.message;
+      toast({
+        title: "Signup Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return <div>Sign In Page</div>;
 }
 
-export default SignIn;
+export default SignUp;
