@@ -5,7 +5,7 @@ import * as z from "zod";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useDebounceValue } from "usehooks-ts";
+import { useDebounceCallback } from "usehooks-ts";
 import { useRouter } from "next/navigation";
 import { signUpSchema } from "@/schemas/signUpSchema";
 import axios, { AxiosError } from "axios";
@@ -26,7 +26,7 @@ function SignUp() {
   const [usernameMessage, setUsernameMessage] = useState("");
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [debouncedUsername] = useDebounceValue(username, 500);
+  const debounced = useDebounceCallback(setUsername, 500);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -42,28 +42,26 @@ function SignUp() {
 
   useEffect(() => {
     const checkUsernameUnique = async () => {
-      if (!debouncedUsername.trim()) return; // Prevent empty requests
-
-      setIsCheckingUsername(true);
-      setUsernameMessage(""); // Reset message
-
-      try {
-        const response = await axios.get<ApiResponse>(
-          `/api/check-username?username=${debouncedUsername}`
-        );
-        setUsernameMessage(response.data.message);
-      } catch (error) {
-        const axiosError = error as AxiosError<ApiResponse>;
-        setUsernameMessage(
-          axiosError.response?.data.message ?? "Error checking username"
-        );
-      } finally {
-        setIsCheckingUsername(false);
+      if (username) {
+        setIsCheckingUsername(true);
+        setUsernameMessage(""); // Reset message
+        try {
+          const response = await axios.get<ApiResponse>(
+            `/api/check-username?username=${username}`
+          );
+          setUsernameMessage(response.data.message);
+        } catch (error) {
+          const axiosError = error as AxiosError<ApiResponse>;
+          setUsernameMessage(
+            axiosError.response?.data.message ?? "Error checking username"
+          );
+        } finally {
+          setIsCheckingUsername(false);
+        }
       }
     };
-
     checkUsernameUnique();
-  }, [debouncedUsername]);
+  }, [username]);
 
   const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
     setIsSubmitting(true);
@@ -96,7 +94,7 @@ function SignUp() {
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
         <div className="text-center">
           <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-6">
-            Join True Feedback
+            Join True Review
           </h1>
           <p className="mb-4">Sign up to start your anonymous adventure</p>
         </div>
@@ -112,7 +110,7 @@ function SignUp() {
                     {...field}
                     onChange={(e) => {
                       field.onChange(e);
-                      setUsername(e.target.value);
+                      debounced(e.target.value);
                     }}
                   />
                   {isCheckingUsername && <Loader2 className="animate-spin" />}
